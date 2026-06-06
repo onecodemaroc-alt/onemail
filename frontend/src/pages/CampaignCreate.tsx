@@ -6,6 +6,19 @@ import { db } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
 import toast from 'react-hot-toast';
 
+const triggerWorkflow = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'github'));
+    if (!snap.exists()) return;
+    const { token, repo, workflow } = snap.data();
+    await fetch(`https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`, {
+      method: 'POST',
+      headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref: 'main' }),
+    });
+  } catch {}
+};
+
 interface SmtpAccount {
   id: string; name: string; username: string;
   status: string; dailyLimit: number; sentToday: number;
@@ -68,9 +81,7 @@ export default function CampaignCreate() {
       });
 
       toast.success(t('success'));
-      if (form.scheduleNow) {
-        fetch('https://onemail-onecode.web.app/api/trigger-workflow', { method: 'POST', mode: 'no-cors' }).catch(() => {});
-      }
+      if (form.scheduleNow) triggerWorkflow();
       navigate('/campaigns');
     } catch (err: any) {
       toast.error(err.message);
