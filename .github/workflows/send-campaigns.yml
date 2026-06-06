@@ -17,7 +17,7 @@ jobs:
         working-directory: backend
       - run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > service-account.json
         working-directory: backend
-      - run: node src/workers/emailWorker.js
+      - run: node run.js
         working-directory: backend
         env:
           FIRESTORE_EMULATOR_HOST: ""
