@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check auth
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Users — owner only
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // SMTP Accounts — only authenticated users can manage
+    match /smtpAccounts/{accountId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // Contacts — only authenticated users
+    match /contacts/{contactId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // Contact Lists
+    match /contactLists/{listId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // Email Templates
+    match /templates/{templateId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // Campaigns
+    match /campaigns/{campaignId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // Email Logs
+    match /emailLogs/{logId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+    }
+  }
+}

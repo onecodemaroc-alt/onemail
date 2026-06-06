@@ -1,0 +1,23 @@
+name: Send Campaigns
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+        working-directory: backend
+      - run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > service-account.json
+        working-directory: backend
+      - run: node src/workers/emailWorker.js
+        working-directory: backend
+        env:
+          FIRESTORE_EMULATOR_HOST: ""

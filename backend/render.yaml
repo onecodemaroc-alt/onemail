@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: onemail-backend
+    env: node
+    region: frankfurt
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: CLIENT_URL
+        value: https://onemail-onecode.web.app
+      - key: FIREBASE_SERVICE_ACCOUNT_PATH
+        value: /etc/secrets/service-account.json
+      - key: ANTHROPIC_API_KEY
+        sync: false
