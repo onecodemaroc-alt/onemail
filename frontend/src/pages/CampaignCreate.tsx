@@ -68,6 +68,9 @@ export default function CampaignCreate() {
       });
 
       toast.success(t('success'));
+      if (form.scheduleNow) {
+        fetch('https://onemail-onecode.web.app/api/trigger-workflow', { method: 'POST', mode: 'no-cors' }).catch(() => {});
+      }
       navigate('/campaigns');
     } catch (err: any) {
       toast.error(err.message);

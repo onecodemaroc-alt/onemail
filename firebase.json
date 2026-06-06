@@ -9,6 +9,10 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
+        "source": "/api/trigger-workflow",
+        "destination": "/api/trigger-workflow.html"
+      },
+      {
         "source": "/track/open",
         "destination": "/track/open.html"
       },

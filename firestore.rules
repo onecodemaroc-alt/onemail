@@ -62,5 +62,10 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update: if isAuth();
     }
+
+    // Config (readable by authenticated users)
+    match /config/{docId} {
+      allow read: if isAuth();
+    }
   }
 }
