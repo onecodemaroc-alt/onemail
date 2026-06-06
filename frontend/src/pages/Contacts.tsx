@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  collection, getDocs, addDoc, deleteDoc, doc, query, orderBy,
+  collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy,
 } from 'firebase/firestore';
 import {
-  Plus, Upload, Camera, Trash2, Search, FileSpreadsheet, List,
+  Plus, Upload, Camera, Trash2, Search, FileSpreadsheet, List, Edit3,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Tesseract from 'tesseract.js';
@@ -42,6 +42,9 @@ export default function Contacts() {
   const [aiModal, setAiModal] = useState(false);
   const [listModal, setListModal] = useState(false);
 
+  const [editModal, setEditModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+
   const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', title: '', tags: '', listId: '' });
   const [newListName, setNewListName] = useState('');
 
@@ -49,6 +52,7 @@ export default function Contacts() {
   const [importColumns, setImportColumns] = useState<string[]>([]);
   const [columnMap, setColumnMap] = useState<Record<string, string>>({});
   const [importProgress, setImportProgress] = useState(0);
+  const [importListId, setImportListId] = useState('');
 
   const [aiImage, setAiImage] = useState<string | null>(null);
   const [aiData, setAiData] = useState<any>(null);
@@ -74,15 +78,14 @@ export default function Contacts() {
 
   const handleAddContact = async () => {
     if (!form.name || !form.email) { toast.error(t('required')); return; }
+    if (!form.listId) { toast.error(t('selectList')); return; }
     try {
       await addDoc(collection(db, 'contacts'), {
         ...form, tags: form.tags.split(',').map((s) => s.trim()).filter(Boolean),
         createdAt: new Date().toISOString(),
       });
-      if (form.listId) {
-        const list = lists.find((l) => l.id === form.listId);
-        if (list) await addDoc(collection(db, 'contactLists'), { ...list, count: list.count + 1 });
-      }
+      const list = lists.find((l) => l.id === form.listId);
+      if (list) await updateDoc(doc(db, 'contactLists', form.listId), { count: list.count + 1 });
       toast.success(t('success'));
       setAddModal(false);
       setForm({ name: '', email: '', phone: '', company: '', title: '', tags: '', listId: '' });
@@ -118,6 +121,7 @@ export default function Contacts() {
   };
 
   const handleImport = async () => {
+    if (!importListId) { toast.error(t('selectList')); return; }
     const fields = ['name', 'email', 'phone', 'company'];
     const colName = Object.entries(columnMap).find(([, v]) => v === 'name')?.[0];
     const colEmail = Object.entries(columnMap).find(([, v]) => v === 'email')?.[0];
@@ -133,13 +137,15 @@ export default function Contacts() {
           phone: colName ? row[Object.entries(columnMap).find(([, v]) => v === 'phone')?.[0] || ''] : '',
           company: colName ? row[Object.entries(columnMap).find(([, v]) => v === 'company')?.[0] || ''] : '',
           tags: [],
-          listId: '',
+          listId: importListId,
           createdAt: new Date().toISOString(),
         });
         imported++;
       } catch { /* skip */ }
       setImportProgress(Math.round(((i + 1) / importData.length) * 100));
     }
+    const list = lists.find((l) => l.id === importListId);
+    if (list) await updateDoc(doc(db, 'contactLists', importListId), { count: imported + (list.count || 0) });
     toast.success(`${imported} ${t('rowsImported')}`);
     setImportModal(false);
     setImportProgress(0);
@@ -186,25 +192,19 @@ export default function Contacts() {
 
   const handleAiSave = async () => {
     if (!aiData?.email) { toast.error(t('required')); return; }
+    if (!aiData.listId) { toast.error(t('selectList')); return; }
     try {
       await addDoc(collection(db, 'contacts'), {
         name: aiData.name || '', email: aiData.email, phone: aiData.phone || '',
         company: aiData.company || '', title: aiData.title || '', address: aiData.address || '',
-        tags: [], listId: '', createdAt: new Date().toISOString(),
+        tags: [], listId: aiData.listId, createdAt: new Date().toISOString(),
       });
+      const list = lists.find((l) => l.id === aiData.listId);
+      if (list) await updateDoc(doc(db, 'contactLists', aiData.listId), { count: list.count + 1 });
       toast.success(t('success'));
       setAiModal(false);
       setAiImage(null);
       setAiData(null);
-      load();
-    } catch (err: any) { toast.error(err.message); }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('confirm'))) return;
-    try {
-      await deleteDoc(doc(db, 'contacts', id));
-      toast.success(t('success'));
       load();
     } catch (err: any) { toast.error(err.message); }
   };
@@ -218,6 +218,50 @@ export default function Contacts() {
       setAiImage(base64);
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleEditContact = (c: Contact) => {
+    setEditingContact(c);
+    setForm({ name: c.name, email: c.email, phone: c.phone, company: c.company, title: c.title, tags: c.tags.join(', '), listId: c.listId });
+    setEditModal(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingContact || !form.name || !form.email) { toast.error(t('required')); return; }
+    if (!form.listId) { toast.error(t('selectList')); return; }
+    try {
+      await updateDoc(doc(db, 'contacts', editingContact.id), {
+        name: form.name, email: form.email, phone: form.phone,
+        company: form.company, title: form.title, tags: form.tags.split(',').map(s => s.trim()).filter(Boolean),
+        listId: form.listId,
+      });
+      if (editingContact.listId !== form.listId) {
+        const oldList = lists.find((l) => l.id === editingContact.listId);
+        if (oldList) {
+          const newCount = (oldList.count || 1) - 1;
+          if (newCount <= 0) {
+            await deleteDoc(doc(db, 'contactLists', editingContact.listId));
+          } else {
+            await updateDoc(doc(db, 'contactLists', editingContact.listId), { count: newCount });
+          }
+        }
+        const newList = lists.find((l) => l.id === form.listId);
+        if (newList) await updateDoc(doc(db, 'contactLists', form.listId), { count: newList.count + 1 });
+      }
+      toast.success(t('success'));
+      setEditModal(false);
+      setEditingContact(null);
+      load();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDeleteList = async (listId: string) => {
+    if (!confirm(t('confirm'))) return;
+    try {
+      await deleteDoc(doc(db, 'contactLists', listId));
+      toast.success(t('success'));
+      load();
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleCreateList = async () => {
@@ -237,9 +281,20 @@ export default function Contacts() {
     return matchesSearch && matchesList;
   });
 
-  const handleDeleteContact = async (id: string) => {
+  const handleDeleteContact = async (id: string, listId?: string) => {
     if (!confirm(t('confirm'))) return;
     await deleteDoc(doc(db, 'contacts', id));
+    if (listId) {
+      const list = lists.find((l) => l.id === listId);
+      if (list) {
+        const newCount = (list.count || 1) - 1;
+        if (newCount <= 0) {
+          await deleteDoc(doc(db, 'contactLists', listId));
+        } else {
+          await updateDoc(doc(db, 'contactLists', listId), { count: newCount });
+        }
+      }
+    }
     toast.success(t('success'));
     load();
   };
@@ -316,9 +371,14 @@ export default function Contacts() {
                     <td className="table-cell">{c.phone || '-'}</td>
                     <td className="table-cell">{c.company || '-'}</td>
                     <td className="table-cell">
-                      <button onClick={() => handleDeleteContact(c.id)} className="text-red-400 hover:text-red-300 p-1">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleEditContact(c)} className="text-blue-400 hover:text-blue-300 p-1">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDeleteContact(c.id, c.listId)} className="text-red-400 hover:text-red-300 p-1">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -369,6 +429,13 @@ export default function Contacts() {
       <Modal open={importModal} onClose={() => setImportModal(false)} title={t('importExcel')} size="lg">
         <div className="space-y-4">
           <p className="text-sm text-gray-400">{t('columnMapping')}</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('contactList')}</label>
+            <select className="input-field" value={importListId} onChange={(e) => setImportListId(e.target.value)}>
+              <option value="">{t('selectList')}</option>
+              {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </div>
           <div className="space-y-3">
             {importColumns.map((col) => (
               <div key={col} className="flex items-center gap-3">
@@ -417,14 +484,21 @@ export default function Contacts() {
                 {aiScanning ? t('scanning') : t('aiScanner')}
               </button>
               {aiData && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-100">{t('extractedData')}</h3>
-                  {['name', 'email', 'phone', 'company', 'title', 'address'].map((field) => (
-                    <div key={field}>
-                      <label className="block text-sm font-medium text-gray-400 mb-1">{t(field)}</label>
-                      <input className="input-field" value={aiData[field] || ''} onChange={(e) => setAiData({ ...aiData, [field]: e.target.value })} />
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-gray-100">{t('extractedData')}</h3>
+                    {['name', 'email', 'phone', 'company', 'title', 'address'].map((field) => (
+                      <div key={field}>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">{t(field)}</label>
+                        <input className="input-field" value={aiData[field] || ''} onChange={(e) => setAiData({ ...aiData, [field]: e.target.value })} />
+                      </div>
+                    ))}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-400 mb-1">{t('contactList')}</label>
+                      <select className="input-field" value={aiData.listId || ''} onChange={(e) => setAiData({ ...aiData, listId: e.target.value })}>
+                        <option value="">{t('selectList')}</option>
+                        {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
                     </div>
-                  ))}
                   <div className="flex justify-end gap-3 pt-4">
                     <button onClick={() => { setAiImage(null); setAiData(null); }} className="btn-secondary">{t('scanAnother')}</button>
                     <button onClick={handleAiSave} className="btn-primary">{t('confirmSave')}</button>
@@ -433,6 +507,44 @@ export default function Contacts() {
               )}
             </div>
           )}
+        </div>
+      </Modal>
+
+      <Modal open={editModal} onClose={() => { setEditModal(false); setEditingContact(null); }} title={t('edit')}>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">{t('name')}</label>
+              <input className="input-field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">{t('email')}</label>
+              <input className="input-field" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">{t('phone')}</label>
+              <input className="input-field" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">{t('company')}</label>
+              <input className="input-field" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('tags')}</label>
+            <input className="input-field" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('contactList')}</label>
+            <select className="input-field" value={form.listId} onChange={(e) => setForm({ ...form, listId: e.target.value })}>
+              <option value="">{t('selectList')}</option>
+              {lists.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <button onClick={() => { setEditModal(false); setEditingContact(null); }} className="btn-secondary">{t('cancel')}</button>
+            <button onClick={handleEditSave} className="btn-primary">{t('save')}</button>
+          </div>
         </div>
       </Modal>
 
@@ -445,7 +557,12 @@ export default function Contacts() {
           {lists.map((l) => (
             <div key={l.id} className="flex items-center justify-between p-3 rounded-lg bg-dark-700/50">
               <span className="text-gray-200">{l.name}</span>
-              <span className="text-sm text-gray-500">{l.count} contacts</span>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-500">{l.count}</span>
+                  <button onClick={() => handleDeleteList(l.id)} className="text-red-400 hover:text-red-300 p-1" title={t('delete')}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+              </div>
             </div>
           ))}
         </div>

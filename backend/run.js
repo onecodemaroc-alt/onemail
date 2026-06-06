@@ -40,7 +40,7 @@ async function main() {
       db.collection('contacts').where('listId', '==', campaign.listId || '_').get(),
       db.collection('smtpAccounts').get(),
     ]);
-    const contacts = contactsSnap.docs.map(d => d.data());
+    const contacts = contactsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const accounts = accountsSnap.docs.map(d => ({ id: d.id, ...d.data() }))
       .filter(a => a.status === 'active' && campaign.smtpAccounts?.includes(a.id));
 
@@ -49,6 +49,8 @@ async function main() {
     const template = campaign.templateId
       ? (await db.collection('templates').doc(campaign.templateId).get()).data()
       : null;
+
+    const trackingHost = 'https://onemail-onecode.web.app';
 
     let index = 0;
     let sent = 0, failed = 0;
@@ -64,14 +66,29 @@ async function main() {
       subject = subject.replace(/{{name}}/g, contact.name).replace(/{{email}}/g, contact.email)
                        .replace(/{{company}}/g, contact.company).replace(/{{title}}/g, contact.title);
 
+      // Rewrite links for click tracking
+      html = html.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*?)>/gi, (match, before, url, after) => {
+        if (url.startsWith('#') || url.startsWith('{{') || url.startsWith('http')) {
+          const encoded = encodeURIComponent(url);
+          return `<a ${before}href="${trackingHost}/track/click?url=${encoded}&campaignId=${campaign.id}&contactId=${contact.id}"${after}>`;
+        }
+        return match;
+      });
+
+      // Inject tracking pixel
+      const pixelUrl = `${trackingHost}/track/open?campaignId=${campaign.id}&contactId=${contact.id}`;
+      html += `\n<img src="${pixelUrl}" width="1" height="1" style="display:none" alt="" />`;
+
       const result = await sendEmail({ to: contact.email, subject, html, account });
       if (result.success) { sent++; } else { failed++; }
 
-      await db.collection('emailLogs').add({
+      const logId = `${campaign.id}_${contact.id}`;
+      await db.collection('emailLogs').doc(logId).set({
         campaignId: campaign.id, recipientEmail: contact.email,
         status: result.success ? 'sent' : 'failed',
         smtpAccount: account.username, timestamp: new Date().toISOString(),
-        error: result.error || null,
+        error: result.error || null, contactId: contact.id,
+        openedAt: null, clickedAt: null,
       });
 
       if (result.success) {

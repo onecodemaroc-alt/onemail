@@ -60,6 +60,7 @@ service cloud.firestore {
     match /emailLogs/{logId} {
       allow read: if isAuth();
       allow create: if isAuth();
+      allow update: if isAuth();
     }
   }
 }

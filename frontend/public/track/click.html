@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html dir="ltr"><head><meta charset="utf-8"/><title>Redirecting...</title></head><body>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyB1APHciGKZDK7t1k85nCKgnGGDMfytmzg",
+  authDomain: "onemail-onecode.firebaseapp.com",
+  projectId: "onemail-onecode",
+  storageBucket: "onemail-onecode.firebasestorage.app",
+  messagingSenderId: "83880691663",
+  appId: "1:83880691663:web:e97c00f15c12005d3374ba"
+});
+const db = firebase.firestore();
+const params = new URLSearchParams(location.search);
+const url = params.get('url');
+const campaignId = params.get('campaignId');
+const contactId = params.get('contactId');
+if (campaignId && contactId) {
+  const logId = `${campaignId}_${contactId}`;
+  firebase.auth().signInAnonymously().then(() => {
+    db.collection('emailLogs').doc(logId).update({ clickedAt: new Date().toISOString() }).catch(() => {}).finally(() => {
+      if (url) window.location.href = decodeURIComponent(url);
+    });
+  });
+} else if (url) {
+  window.location.href = decodeURIComponent(url);
+}
+</script>
+<p style="color:#666;font-family:sans-serif;text-align:center;margin-top:40vh">Redirecting...</p>
+</body></html>

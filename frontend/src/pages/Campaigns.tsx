@@ -87,7 +87,7 @@ export default function Campaigns() {
               </thead>
               <tbody>
                 {campaigns.map((c) => (
-                  <tr key={c.id} className="border-b border-dark-700 hover:bg-dark-700/50">
+                  <tr key={c.id} className="border-b border-dark-700 hover:bg-dark-700/50 cursor-pointer" onClick={() => window.location.href = `/campaigns/${c.id}`}>
                     <td className="table-cell font-medium text-gray-100">{c.name}</td>
                     <td className="table-cell">{statusBadge(c.status)}</td>
                     <td className="table-cell">

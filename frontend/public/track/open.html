@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html dir="ltr"><head><meta charset="utf-8"/><title>Loading...</title></head><body>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyB1APHciGKZDK7t1k85nCKgnGGDMfytmzg",
+  authDomain: "onemail-onecode.firebaseapp.com",
+  projectId: "onemail-onecode",
+  storageBucket: "onemail-onecode.firebasestorage.app",
+  messagingSenderId: "83880691663",
+  appId: "1:83880691663:web:e97c00f15c12005d3374ba"
+});
+const db = firebase.firestore();
+const params = new URLSearchParams(location.search);
+const campaignId = params.get('campaignId');
+const contactId = params.get('contactId');
+if (campaignId && contactId) {
+  const logId = `${campaignId}_${contactId}`;
+  firebase.auth().signInAnonymously().then(() => {
+    db.collection('emailLogs').doc(logId).update({ openedAt: new Date().toISOString() }).catch(() => {});
+  });
+}
+</script>
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="display:none" />
+</body></html>

@@ -19,5 +19,3 @@ jobs:
         working-directory: backend
       - run: node run.js
         working-directory: backend
-        env:
-          FIRESTORE_EMULATOR_HOST: ""

@@ -9,6 +9,14 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
+        "source": "/track/open",
+        "destination": "/track/open.html"
+      },
+      {
+        "source": "/track/click",
+        "destination": "/track/click.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
