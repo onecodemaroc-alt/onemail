@@ -23,6 +23,7 @@ interface SmtpAccount {
   sentToday: number;
   imapHost?: string;
   imapPort?: number;
+  signature?: string;
 }
 
 export default function SmtpAccounts() {
@@ -34,7 +35,7 @@ export default function SmtpAccounts() {
   const [form, setForm] = useState({
     name: '', username: '', password: '', host: 'mail.onecode.ma',
     port: 465, secure: true, dailyLimit: 300, ratePerMinute: 5, status: 'active' as 'active' | 'inactive',
-    imapHost: '', imapPort: 993,
+    imapHost: '', imapPort: 993, signature: '',
   });
 
   const load = async () => {
@@ -51,13 +52,13 @@ export default function SmtpAccounts() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm({ name: '', username: '', password: '', host: 'mail.onecode.ma', port: 465, secure: true, dailyLimit: 300, ratePerMinute: 5, status: 'active', imapHost: '', imapPort: 993 });
+    setForm({ name: '', username: '', password: '', host: 'mail.onecode.ma', port: 465, secure: true, dailyLimit: 300, ratePerMinute: 5, status: 'active', imapHost: '', imapPort: 993, signature: '' });
     setModalOpen(true);
   };
 
   const openEdit = (acc: SmtpAccount) => {
     setEditId(acc.id);
-    setForm({ name: acc.name, username: acc.username, password: '', host: acc.host, port: acc.port, secure: acc.secure, dailyLimit: acc.dailyLimit, ratePerMinute: acc.ratePerMinute || 5, status: acc.status, imapHost: acc.imapHost || '', imapPort: acc.imapPort || (acc.secure ? 993 : 143) });
+    setForm({ name: acc.name, username: acc.username, password: '', host: acc.host, port: acc.port, secure: acc.secure, dailyLimit: acc.dailyLimit, ratePerMinute: acc.ratePerMinute || 5, status: acc.status, imapHost: acc.imapHost || '', imapPort: acc.imapPort || (acc.secure ? 993 : 143), signature: acc.signature || '' });
     setModalOpen(true);
   };
 
@@ -65,7 +66,7 @@ export default function SmtpAccounts() {
     if (!form.name || !form.username) { toast.error(t('required')); return; }
     try {
       if (editId) {
-        const update: any = { name: form.name, username: form.username, host: form.host, port: form.port, secure: form.secure, dailyLimit: form.dailyLimit, ratePerMinute: form.ratePerMinute, status: form.status, imapHost: form.imapHost || form.host, imapPort: form.imapPort || (form.secure ? 993 : 143) };
+        const update: any = { name: form.name, username: form.username, host: form.host, port: form.port, secure: form.secure, dailyLimit: form.dailyLimit, ratePerMinute: form.ratePerMinute, status: form.status, imapHost: form.imapHost || form.host, imapPort: form.imapPort || (form.secure ? 993 : 143), signature: form.signature };
         if (form.password) update.password = btoa(form.password);
         await updateDoc(doc(db, 'smtpAccounts', editId), update);
         toast.success(t('success'));
@@ -75,6 +76,7 @@ export default function SmtpAccounts() {
           host: form.host, port: form.port, secure: form.secure,
           dailyLimit: form.dailyLimit, ratePerMinute: form.ratePerMinute, sentToday: 0, status: 'active',
           imapHost: form.imapHost || form.host, imapPort: form.imapPort || (form.secure ? 993 : 143),
+          signature: form.signature,
         });
         toast.success(t('success'));
       }
@@ -215,6 +217,10 @@ export default function SmtpAccounts() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">{t('imapHint')}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('signature')}</label>
+            <textarea className="input-field min-h-[80px]" value={form.signature} onChange={(e) => setForm({ ...form, signature: e.target.value })} placeholder={t('signaturePlaceholder')} />
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>

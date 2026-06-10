@@ -75,13 +75,15 @@ async function processQuickSends() {
       const transporter = getTransporter(acc);
       let sent = 0, failed = 0;
 
+      const fullBody = [qs.body || '', acc.signature || ''].filter(Boolean).join('\n\n');
+
       for (const email of emails) {
         try {
           await transporter.sendMail({
             from: `"${acc.name}" <${acc.smtpUser}>`,
             to: email,
             subject: qs.subject || '(no subject)',
-            text: [qs.body || '', qs.signature || ''].filter(Boolean).join('\n\n'),
+            text: fullBody,
             attachments: attachments.length > 0 ? attachments : undefined,
           });
           sent++;
