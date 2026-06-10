@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc } from 'firebase/firestore';
-import { Inbox as InboxIcon, Mail, ChevronLeft, Reply, Forward, Trash2 } from 'lucide-react';
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, where } from 'firebase/firestore';
+import { Inbox as InboxIcon, Mail, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
-import Modal from '../components/Modal';
 
 interface Email {
   id: string;
   smtpAccount: string;
+  smtpAccountId: string;
   from: string;
   to: string;
   subject: string;
@@ -15,6 +15,8 @@ interface Email {
   htmlBody: string;
   date: string;
   read: boolean;
+  folder: string;
+  spam: boolean;
   fetchedAt: string;
 }
 
@@ -23,18 +25,22 @@ export default function Inbox() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Email | null>(null);
+  const [tab, setTab] = useState<'all' | 'inbox' | 'spam'>('all');
 
   const load = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(query(collection(db, 'inbox'), orderBy('date', 'desc'), limit(100)));
+      const constraints: any[] = [orderBy('date', 'desc')];
+      if (tab === 'inbox') constraints.unshift(where('spam', '==', false));
+      else if (tab === 'spam') constraints.unshift(where('spam', '==', true));
+      const snap = await getDocs(query(collection(db, 'inbox'), ...constraints, limit(100)));
       setEmails(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Email)));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [tab]);
 
   const openEmail = async (email: Email) => {
     setSelected(email);
@@ -44,6 +50,14 @@ export default function Inbox() {
       setEmails((prev) => prev.map((e) => e.id === email.id ? { ...e, read: true } : e));
     }
   };
+
+  const tabs = [
+    { key: 'all' as const, label: t('all') },
+    { key: 'inbox' as const, label: t('inbox') },
+    { key: 'spam' as const, label: t('spam') },
+  ];
+
+  const spamCount = emails.filter(e => e.spam).length;
 
   if (loading) {
     return (
@@ -57,6 +71,17 @@ export default function Inbox() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">{t('inbox')}</h1>
+        <span className="text-sm text-gray-500">{emails.length} {t('emails')} ({spamCount} spam)</span>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-dark-700 pb-2">
+        {tabs.map((t) => (
+          <button key={t.key} onClick={() => { setTab(t.key); setSelected(null); }}
+            className={`px-4 py-2 text-sm rounded-lg transition-colors ${tab === t.key ? 'bg-brand-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {emails.length === 0 ? (
@@ -71,20 +96,24 @@ export default function Inbox() {
             {emails.map((email) => (
               <div
                 key={email.id}
-                className={`p-4 border-b border-dark-700 cursor-pointer hover:bg-dark-700/50 transition-colors ${!email.read ? 'bg-dark-700/30' : ''} ${selected?.id === email.id ? 'bg-dark-600/50' : ''}`}
+                className={`p-4 border-b border-dark-700 cursor-pointer hover:bg-dark-700/50 transition-colors ${!email.read ? 'bg-dark-700/30' : ''} ${selected?.id === email.id ? 'bg-dark-600/50' : ''} ${email.spam ? 'border-l-2 border-l-red-500/50' : ''}`}
                 onClick={() => openEmail(email)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm truncate ${!email.read ? 'font-semibold text-white' : 'text-gray-300'}`}>
-                      {email.from}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      {email.spam && <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />}
+                      <p className={`text-sm truncate ${!email.read ? 'font-semibold text-white' : 'text-gray-300'}`}>
+                        {email.from}
+                      </p>
+                    </div>
                     <p className={`text-xs truncate mt-0.5 ${!email.read ? 'font-medium text-gray-200' : 'text-gray-400'}`}>
                       {email.subject || '(no subject)'}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1 truncate">
-                      {email.textBody?.slice(0, 80) || ''}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-600">{email.smtpAccount}</span>
+                      {email.spam && <span className="badge badge-danger text-[10px] px-1 py-0">spam</span>}
+                    </div>
                   </div>
                   <span className="text-xs text-gray-500 whitespace-nowrap">
                     {new Date(email.date).toLocaleDateString()}
@@ -103,8 +132,8 @@ export default function Inbox() {
                     <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="flex gap-2">
-                    <span className="badge badge-info text-xs">{t('reply')}</span>
-                    <span className="badge badge-warning text-xs">{t('forward')}</span>
+                    {selected.spam && <span className="badge badge-danger">{t('spam')}</span>}
+                    <span className="badge badge-info">{selected.smtpAccount}</span>
                   </div>
                 </div>
                 <h2 className="text-lg font-semibold text-white mb-4">{selected.subject || '(no subject)'}</h2>
@@ -113,6 +142,7 @@ export default function Inbox() {
                   <div><span className="text-gray-500">{t('email')}:</span> <span className="text-gray-200">{selected.to}</span></div>
                   <div><span className="text-gray-500">{t('date')}:</span> <span className="text-gray-200">{new Date(selected.date).toLocaleString()}</span></div>
                   <div><span className="text-gray-500">{t('smtpAccount')}:</span> <span className="text-gray-200">{selected.smtpAccount}</span></div>
+                  <div><span className="text-gray-500">{t('folder')}:</span> <span className="text-gray-200">{selected.folder}</span></div>
                 </div>
                 <div className="border-t border-dark-700 pt-4">
                   {selected.htmlBody ? (

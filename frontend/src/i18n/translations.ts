@@ -163,6 +163,9 @@ export const translations = {
     date: 'التاريخ',
     noEmails: 'لا توجد رسائل واردة',
     selectEmail: 'اختر رسالة للعرض',
+    spam: 'رسائل غير مرغوب فيها',
+    emails: 'رسائل',
+    folder: 'المجلد',
   },
   fr: {
     appName: 'OneMail',
@@ -328,6 +331,9 @@ export const translations = {
     date: 'Date',
     noEmails: 'Aucun email reçu',
     selectEmail: 'Sélectionnez un email',
+    spam: 'Spam',
+    emails: 'emails',
+    folder: 'Dossier',
   },
 };
 

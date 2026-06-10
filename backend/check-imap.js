@@ -11,6 +11,56 @@ const serviceAccount = JSON.parse(
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
+const SPAM_FOLDERS = ['Junk', 'Spam', 'INBOX.Junk', 'INBOX.Spam', '[Gmail]/Spam', '&BCoDNBBD-'];
+
+async function checkMailbox(client, acc, folderName) {
+  const isSpam = SPAM_FOLDERS.some(f => folderName.toLowerCase().includes(f.toLowerCase()));
+  let lock;
+  try {
+    lock = await client.getMailboxLock(folderName);
+  } catch {
+    return []; // Folder doesn't exist
+  }
+  try {
+    const mails = [];
+    for await (const msg of client.fetch({ seen: false }, { uid: true, envelope: true, bodyStructure: true, source: true, flags: true })) {
+      const parsed = await simpleParser(msg.source);
+      const spamScore = (parsed.headers?.get('x-spam-status') || '').toLowerCase();
+      const headersSpam = spamScore.includes('yes') || spamScore.includes('high');
+
+      const email = {
+        smtpAccount: acc.name,
+        smtpAccountId: acc.id,
+        from: parsed.from?.text || '',
+        to: Array.isArray(parsed.to) ? parsed.to.map(t => t.text).join(', ') : parsed.to?.text || '',
+        subject: parsed.subject || '',
+        textBody: parsed.text || '',
+        htmlBody: parsed.html || '',
+        date: parsed.date?.toISOString() || new Date().toISOString(),
+        messageId: parsed.messageId || '',
+        uid: msg.uid,
+        read: msg.flags.includes('\\Seen'),
+        folder: folderName,
+        spam: isSpam || headersSpam,
+        fetchedAt: new Date().toISOString(),
+      };
+
+      const existing = await db.collection('inbox')
+        .where('messageId', '==', email.messageId)
+        .where('smtpAccountId', '==', acc.id)
+        .get();
+
+      if (existing.empty) {
+        await db.collection('inbox').add(email);
+        mails.push({ subject: email.subject, spam: email.spam });
+      }
+    }
+    return mails;
+  } finally {
+    lock.release();
+  }
+}
+
 async function main() {
   console.log('🔍 Checking for IMAP accounts...');
   const snap = await db.collection('smtpAccounts').where('status', '==', 'active').get();
@@ -34,45 +84,25 @@ async function main() {
 
     try {
       await client.connect();
-      const lock = await client.getMailboxLock('INBOX');
-      try {
-        const mails = [];
-        for await (const msg of client.fetch({ seen: false }, { uid: true, envelope: true, bodyStructure: true, source: true })) {
-          const parsed = await simpleParser(msg.source);
-          const email = {
-            smtpAccount: acc.name,
-            smtpAccountId: acc.id,
-            from: parsed.from?.text || '',
-            to: Array.isArray(parsed.to) ? parsed.to.map(t => t.text).join(', ') : parsed.to?.text || '',
-            subject: parsed.subject || '',
-            textBody: parsed.text || '',
-            htmlBody: parsed.html || '',
-            date: parsed.date?.toISOString() || new Date().toISOString(),
-            messageId: parsed.messageId || '',
-            uid: msg.uid,
-            read: false,
-            fetchedAt: new Date().toISOString(),
-          };
 
-          // Avoid duplicates by messageId
-          const existing = await db.collection('inbox')
-            .where('messageId', '==', email.messageId)
-            .where('smtpAccountId', '==', acc.id)
-            .get();
+      // Check INBOX and all spam folders
+      const folders = ['INBOX', ...SPAM_FOLDERS];
+      let total = 0, spamCount = 0;
 
-          if (existing.empty) {
-            await db.collection('inbox').add(email);
-            mails.push(email.subject);
-          }
+      for (const folderName of folders) {
+        const mails = await checkMailbox(client, acc, folderName);
+        for (const m of mails) {
+          total++;
+          if (m.spam) spamCount++;
         }
-        if (mails.length > 0) {
-          console.log(`  ✅ ${mails.length} new: ${mails.join(', ')}`);
-        } else {
-          console.log('  ℹ️ No new emails');
-        }
-      } finally {
-        lock.release();
       }
+
+      if (total > 0) {
+        console.log(`  ✅ ${total} new (${spamCount} spam)`);
+      } else {
+        console.log('  ℹ️ No new emails');
+      }
+
       await client.logout();
     } catch (err) {
       console.error(`  ❌ IMAP error for ${acc.username}:`, err.message);
