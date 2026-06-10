@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Send, Paperclip, X, Users } from 'lucide-react';
+import { Send, Paperclip, X, Users, Plus, Mail } from 'lucide-react';
 import { db, storage } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
 import toast from 'react-hot-toast';
@@ -21,6 +21,8 @@ export default function Compose() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
+  const [manualEmails, setManualEmails] = useState<string[]>([]);
+  const [manualInput, setManualInput] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -37,6 +39,24 @@ export default function Compose() {
 
   const toggleContact = (id: string) => {
     setSelectedContacts(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
+
+  const addManualEmail = () => {
+    const email = manualInput.trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error(t('invalidEmail')); return;
+    }
+    if (manualEmails.includes(email)) { toast.error(t('duplicateEmail')); return; }
+    setManualEmails([...manualEmails, email]);
+    setManualInput('');
+  };
+
+  const removeManualEmail = (email: string) => {
+    setManualEmails(manualEmails.filter(e => e !== email));
+  };
+
+  const handleManualKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); addManualEmail(); }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,10 +82,10 @@ export default function Compose() {
 
     setSending(true);
     try {
-      // Resolve contact emails
       const selectedContactDocs = contacts.filter(c => selectedContacts.includes(c.id));
-      const emails = selectedContactDocs.map(c => c.email).filter(Boolean);
-      if (emails.length === 0) { toast.error('No valid email addresses'); setSending(false); return; }
+      const contactEmails = selectedContactDocs.map(c => c.email).filter(Boolean);
+      const emails = [...contactEmails, ...manualEmails];
+      if (emails.length === 0) { toast.error(t('selectRecipients')); setSending(false); return; }
 
       const uploaded = [];
       for (const att of attachments) {
@@ -86,6 +106,7 @@ export default function Compose() {
       triggerWorkflow();
       toast.success(t('success'));
       setSelectedContacts([]);
+      setManualEmails([]);
       setSubject('');
       setBody('');
       setAttachments([]);
@@ -120,7 +141,23 @@ export default function Compose() {
             <Users className="w-4 h-4" /> {t('selectRecipients')} ({selectedContacts.length})
           </h2>
           <input className="input-field mb-3 text-sm" placeholder={t('search')} value={search} onChange={(e) => setSearch(e.target.value)} />
-          <div className="space-y-1 max-h-[400px] overflow-y-auto">
+          {/* Manual email input */}
+          <div className="flex gap-2 mb-3">
+            <input className="input-field text-sm flex-1" placeholder={t('addEmailPlaceholder')} value={manualInput} onChange={(e) => setManualInput(e.target.value)} onKeyDown={handleManualKeyDown} />
+            <button onClick={addManualEmail} className="btn-secondary p-2 shrink-0"><Plus className="w-4 h-4" /></button>
+          </div>
+          {manualEmails.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {manualEmails.map(email => (
+                <span key={email} className="inline-flex items-center gap-1 bg-brand-600/20 text-brand-400 text-xs px-2 py-1 rounded-full">
+                  <Mail className="w-3 h-3" />
+                  {email}
+                  <button onClick={() => removeManualEmail(email)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="space-y-1 max-h-[300px] overflow-y-auto">
             {filtered.map(c => (
               <label key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-dark-700/50 cursor-pointer">
                 <input type="checkbox" checked={selectedContacts.includes(c.id)} onChange={() => toggleContact(c.id)} className="rounded bg-dark-700 border-dark-400" />
