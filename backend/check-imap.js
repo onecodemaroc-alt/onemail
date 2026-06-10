@@ -28,6 +28,7 @@ async function checkMailbox(client, acc, folderName) {
       const spamScore = (parsed.headers?.get('x-spam-status') || '').toLowerCase();
       const headersSpam = spamScore.includes('yes') || spamScore.includes('high');
 
+      const flags = Array.isArray(msg.flags) ? msg.flags : [...(msg.flags || [])];
       const email = {
         smtpAccount: acc.name,
         smtpAccountId: acc.id,
@@ -39,7 +40,7 @@ async function checkMailbox(client, acc, folderName) {
         date: parsed.date?.toISOString() || new Date().toISOString(),
         messageId: parsed.messageId || '',
         uid: msg.uid,
-        read: msg.flags.includes('\\Seen'),
+        read: flags.includes('\\Seen'),
         folder: folderName,
         spam: isSpam || headersSpam,
         fetchedAt: new Date().toISOString(),
