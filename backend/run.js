@@ -66,6 +66,11 @@ async function main() {
       subject = subject.replace(/{{name}}/g, contact.name).replace(/{{email}}/g, contact.email)
                        .replace(/{{company}}/g, contact.company).replace(/{{title}}/g, contact.title);
 
+      // Append signature
+      if (campaign.signature) {
+        html += `<br><br>--<br>${campaign.signature.replace(/\n/g, '<br>')}`;
+      }
+
       // Rewrite links for click tracking
       html = html.replace(/<a\s+([^>]*?)href=["']([^"']+)["']([^>]*?)>/gi, (match, before, url, after) => {
         if (url.startsWith('#') || url.startsWith('{{') || url.startsWith('http')) {

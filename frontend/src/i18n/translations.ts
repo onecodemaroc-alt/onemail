@@ -168,6 +168,8 @@ export const translations = {
     folder: 'المجلد',
     compose: 'إنشاء رسالة',
     attachFile: 'إرفاق ملف',
+    signature: 'التوقيع',
+    signaturePlaceholder: 'أدخل توقيع البريد الإلكتروني (سيتم إضافته أسفل الرسالة)',
   },
   fr: {
     appName: 'OneMail',
@@ -338,6 +340,8 @@ export const translations = {
     folder: 'Dossier',
     compose: 'Composer',
     attachFile: 'Joindre un fichier',
+    signature: 'Signature',
+    signaturePlaceholder: 'Entrez votre signature email (ajoutée en bas du message)',
   },
 };
 

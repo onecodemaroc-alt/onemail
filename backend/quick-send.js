@@ -81,7 +81,7 @@ async function processQuickSends() {
             from: `"${acc.name}" <${acc.smtpUser}>`,
             to: email,
             subject: qs.subject || '(no subject)',
-            text: qs.body || '',
+            text: [qs.body || '', qs.signature || ''].filter(Boolean).join('\n\n'),
             attachments: attachments.length > 0 ? attachments : undefined,
           });
           sent++;

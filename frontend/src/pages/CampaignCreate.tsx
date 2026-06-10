@@ -43,6 +43,7 @@ export default function CampaignCreate() {
   const [step, setStep] = useState<'draft' | 'review'>('draft');
   const [form, setForm] = useState({
     name: '', listId: '', templateId: '', subject: '', customBody: '',
+    signature: '',
     smtpAccountIds: [] as string[], ratePerMinute: 10, scheduleNow: true, scheduledAt: '',
   });
 
@@ -72,6 +73,7 @@ export default function CampaignCreate() {
         templateId: form.templateId,
         subject: form.subject,
         customBody: form.customBody,
+        signature: form.signature,
         smtpAccounts: form.smtpAccountIds,
         ratePerMinute: form.ratePerMinute,
         scheduledAt: form.scheduleNow ? new Date().toISOString() : form.scheduledAt,
@@ -160,6 +162,11 @@ export default function CampaignCreate() {
               <input className="input-field" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
             </div>
           )}
+
+          <div className="card">
+            <h3 className="card-header">{t('signature')}</h3>
+            <textarea className="input-field min-h-[80px]" value={form.signature} onChange={(e) => setForm({ ...form, signature: e.target.value })} placeholder={t('signaturePlaceholder')} />
+          </div>
 
           <div className="card">
             <h3 className="card-header">{t('selectAccounts')}</h3>

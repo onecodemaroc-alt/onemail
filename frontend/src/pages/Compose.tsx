@@ -18,6 +18,7 @@ export default function Compose() {
   const [smtpId, setSmtpId] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [signature, setSignature] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
@@ -78,6 +79,7 @@ export default function Compose() {
         smtpAccountId: smtpId,
         subject,
         body,
+        signature,
         attachments: uploaded,
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -88,6 +90,7 @@ export default function Compose() {
       setSelectedContacts([]);
       setSubject('');
       setBody('');
+      setSignature('');
       setAttachments([]);
     } catch (err: any) {
       toast.error(err.message);
@@ -148,6 +151,11 @@ export default function Compose() {
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">{t('body')}</label>
             <textarea className="input-field min-h-[200px]" value={body} onChange={(e) => setBody(e.target.value)} />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">{t('signature')}</label>
+            <textarea className="input-field min-h-[80px]" value={signature} onChange={(e) => setSignature(e.target.value)} placeholder={t('signaturePlaceholder')} />
           </div>
 
           {/* Attachments */}
