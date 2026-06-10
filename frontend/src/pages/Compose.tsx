@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Send, Paperclip, X, Users, Plus, Mail } from 'lucide-react';
+import { Send, Paperclip, X, Users, Plus, Mail, BookmarkPlus } from 'lucide-react';
 import { db, storage } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
 import toast from 'react-hot-toast';
 
   interface Contact { id: string; name: string; email: string; listId: string; }
 interface SmtpAccount { id: string; name: string; username: string; }
+interface ContactList { id: string; name: string; }
 interface Attachment { file: File; name: string; uploading?: boolean; url?: string; }
 
 export default function Compose() {
   const { t } = useI18n();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [accounts, setAccounts] = useState<SmtpAccount[]>([]);
+  const [contactLists, setContactLists] = useState<ContactList[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<string[]>([]);
   const [smtpId, setSmtpId] = useState('');
   const [subject, setSubject] = useState('');
@@ -23,17 +25,22 @@ export default function Compose() {
   const [search, setSearch] = useState('');
   const [manualEmails, setManualEmails] = useState<string[]>([]);
   const [manualInput, setManualInput] = useState('');
+  const [saveListId, setSaveListId] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     Promise.all([
       getDocs(collection(db, 'contacts')),
       getDocs(collection(db, 'smtpAccounts')),
-    ]).then(([cSnap, aSnap]) => {
+      getDocs(collection(db, 'contactLists')),
+    ]).then(([cSnap, aSnap, lSnap]) => {
       setContacts(cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Contact)));
       const accs = aSnap.docs.map(d => ({ id: d.id, ...d.data() } as SmtpAccount));
       setAccounts(accs);
       if (accs.length > 0) setSmtpId(accs[0].id);
+      const lists = lSnap.docs.map(d => ({ id: d.id, ...d.data() } as ContactList));
+      setContactLists(lists);
+      if (lists.length > 0) setSaveListId(lists[0].id);
     });
   }, []);
 
@@ -53,6 +60,21 @@ export default function Compose() {
 
   const removeManualEmail = (email: string) => {
     setManualEmails(manualEmails.filter(e => e !== email));
+  };
+
+  const saveContact = async (email: string) => {
+    const name = prompt(t('enterName'), email.split('@')[0]);
+    if (!name) return;
+    if (!saveListId) { toast.error(t('selectList')); return; }
+    try {
+      await addDoc(collection(db, 'contacts'), { name, email, listId: saveListId });
+      toast.success(t('success'));
+      // Reload contacts
+      const snap = await getDocs(collection(db, 'contacts'));
+      setContacts(snap.docs.map(d => ({ id: d.id, ...d.data() } as Contact)));
+    } catch (err: any) {
+      toast.error(err.message);
+    }
   };
 
   const handleManualKeyDown = (e: React.KeyboardEvent) => {
@@ -77,7 +99,10 @@ export default function Compose() {
   };
 
   const handleSend = async () => {
-    if (selectedContacts.length === 0) { toast.error(t('selectRecipients')); return; }
+    const selectedContactDocs = contacts.filter(c => selectedContacts.includes(c.id));
+    const contactEmails = selectedContactDocs.map(c => c.email).filter(Boolean);
+    const emails = [...contactEmails, ...manualEmails];
+    if (emails.length === 0) { toast.error(t('selectRecipients')); return; }
     if (!smtpId) { toast.error(t('selectAccounts')); return; }
 
     setSending(true);
@@ -149,13 +174,19 @@ export default function Compose() {
           {manualEmails.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-3">
               {manualEmails.map(email => (
-                <span key={email} className="inline-flex items-center gap-1 bg-brand-600/20 text-brand-400 text-xs px-2 py-1 rounded-full">
+                <span key={email} className="inline-flex items-center gap-1 bg-brand-600/20 text-brand-400 text-xs px-2 py-1 rounded-full group">
                   <Mail className="w-3 h-3" />
                   {email}
+                  <button onClick={() => saveContact(email)} className="hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity" title={t('saveContact')}><BookmarkPlus className="w-3 h-3" /></button>
                   <button onClick={() => removeManualEmail(email)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
                 </span>
               ))}
             </div>
+          )}
+          {manualEmails.length > 0 && contactLists.length > 0 && (
+            <select className="input-field text-xs mb-3" value={saveListId} onChange={(e) => setSaveListId(e.target.value)}>
+              {contactLists.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
           )}
           <div className="space-y-1 max-h-[300px] overflow-y-auto">
             {filtered.map(c => (
