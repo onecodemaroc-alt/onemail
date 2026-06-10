@@ -1,9 +1,9 @@
-name: Send Campaigns
+name: Send Campaigns & Check IMAP
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/1 * * * *'
 
 jobs:
   send:
@@ -18,4 +18,6 @@ jobs:
       - run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > service-account.json
         working-directory: backend
       - run: node run.js
+        working-directory: backend
+      - run: node check-imap.js
         working-directory: backend

@@ -9,6 +9,7 @@ import {
   Shield,
   LogOut,
   Languages,
+  Inbox,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -51,6 +52,10 @@ export default function Sidebar() {
         <NavLink to="/smtp" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Mail className="w-5 h-5" />
           <span>{t('smtpAccounts')}</span>
+        </NavLink>
+        <NavLink to="/inbox" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <Inbox className="w-5 h-5" />
+          <span>{t('inbox')}</span>
         </NavLink>
         <NavLink to="/logs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <ScrollText className="w-5 h-5" />

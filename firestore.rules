@@ -67,5 +67,12 @@ service cloud.firestore {
     match /config/{docId} {
       allow read: if isAuth();
     }
+
+    // Inbox (received emails)
+    match /inbox/{emailId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+    }
   }
 }

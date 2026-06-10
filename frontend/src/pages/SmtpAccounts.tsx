@@ -21,6 +21,8 @@ interface SmtpAccount {
   dailyLimit: number;
   ratePerMinute: number;
   sentToday: number;
+  imapHost?: string;
+  imapPort?: number;
 }
 
 export default function SmtpAccounts() {
@@ -32,6 +34,7 @@ export default function SmtpAccounts() {
   const [form, setForm] = useState({
     name: '', username: '', password: '', host: 'mail.onecode.ma',
     port: 465, secure: true, dailyLimit: 300, ratePerMinute: 5, status: 'active' as 'active' | 'inactive',
+    imapHost: '', imapPort: 993,
   });
 
   const load = async () => {
@@ -48,13 +51,13 @@ export default function SmtpAccounts() {
 
   const openAdd = () => {
     setEditId(null);
-    setForm({ name: '', username: '', password: '', host: 'mail.onecode.ma', port: 465, secure: true, dailyLimit: 300, ratePerMinute: 5, status: 'active' });
+    setForm({ name: '', username: '', password: '', host: 'mail.onecode.ma', port: 465, secure: true, dailyLimit: 300, ratePerMinute: 5, status: 'active', imapHost: '', imapPort: 993 });
     setModalOpen(true);
   };
 
   const openEdit = (acc: SmtpAccount) => {
     setEditId(acc.id);
-    setForm({ name: acc.name, username: acc.username, password: '', host: acc.host, port: acc.port, secure: acc.secure, dailyLimit: acc.dailyLimit, ratePerMinute: acc.ratePerMinute || 5, status: acc.status });
+    setForm({ name: acc.name, username: acc.username, password: '', host: acc.host, port: acc.port, secure: acc.secure, dailyLimit: acc.dailyLimit, ratePerMinute: acc.ratePerMinute || 5, status: acc.status, imapHost: acc.imapHost || '', imapPort: acc.imapPort || (acc.secure ? 993 : 143) });
     setModalOpen(true);
   };
 
@@ -62,7 +65,7 @@ export default function SmtpAccounts() {
     if (!form.name || !form.username) { toast.error(t('required')); return; }
     try {
       if (editId) {
-        const update: any = { name: form.name, username: form.username, host: form.host, port: form.port, secure: form.secure, dailyLimit: form.dailyLimit, ratePerMinute: form.ratePerMinute, status: form.status };
+        const update: any = { name: form.name, username: form.username, host: form.host, port: form.port, secure: form.secure, dailyLimit: form.dailyLimit, ratePerMinute: form.ratePerMinute, status: form.status, imapHost: form.imapHost || form.host, imapPort: form.imapPort || (form.secure ? 993 : 143) };
         if (form.password) update.password = btoa(form.password);
         await updateDoc(doc(db, 'smtpAccounts', editId), update);
         toast.success(t('success'));
@@ -71,6 +74,7 @@ export default function SmtpAccounts() {
           name: form.name, username: form.username, password: btoa(form.password),
           host: form.host, port: form.port, secure: form.secure,
           dailyLimit: form.dailyLimit, ratePerMinute: form.ratePerMinute, sentToday: 0, status: 'active',
+          imapHost: form.imapHost || form.host, imapPort: form.imapPort || (form.secure ? 993 : 143),
         });
         toast.success(t('success'));
       }
@@ -197,6 +201,20 @@ export default function SmtpAccounts() {
               <input type="checkbox" checked={form.secure} onChange={(e) => setForm({ ...form, secure: e.target.checked })} className="rounded bg-dark-700 border-dark-400" />
               SSL/TLS
             </label>
+          </div>
+          <div className="border-t border-dark-700 pt-4">
+            <h4 className="text-sm font-semibold text-gray-300 mb-3">{t('imapSettings')}</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">{t('imapHost')}</label>
+                <input className="input-field" placeholder={form.host} value={form.imapHost} onChange={(e) => setForm({ ...form, imapHost: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">{t('imapPort')}</label>
+                <input className="input-field" type="number" placeholder={form.secure ? '993' : '143'} value={form.imapPort} onChange={(e) => setForm({ ...form, imapPort: Number(e.target.value) })} />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">{t('imapHint')}</p>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>

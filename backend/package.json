@@ -13,7 +13,9 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "firebase-admin": "^13.2.0",
+    "imapflow": "^1.4.0",
     "libsodium-wrappers": "^0.8.4",
+    "mailparser": "^3.9.9",
     "nodemailer": "^6.10.0",
     "playwright": "^1.60.0",
     "tweetsodium": "^0.0.4"

@@ -10,6 +10,7 @@ import CampaignCreate from './pages/CampaignCreate';
 import CampaignDetail from './pages/CampaignDetail';
 import SmtpAccounts from './pages/SmtpAccounts';
 import EmailLogs from './pages/EmailLogs';
+import Inbox from './pages/Inbox';
 import UsersPage from './pages/Users';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="smtp" element={<SmtpAccounts />} />
         <Route path="logs" element={<EmailLogs />} />
+        <Route path="inbox" element={<Inbox />} />
         <Route path="users" element={<AdminRoute><UsersPage /></AdminRoute>} />
       </Route>
     </Routes>
