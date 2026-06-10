@@ -166,6 +166,8 @@ export const translations = {
     spam: 'رسائل غير مرغوب فيها',
     emails: 'رسائل',
     folder: 'المجلد',
+    compose: 'إنشاء رسالة',
+    attachFile: 'إرفاق ملف',
   },
   fr: {
     appName: 'OneMail',
@@ -334,6 +336,8 @@ export const translations = {
     spam: 'Spam',
     emails: 'emails',
     folder: 'Dossier',
+    compose: 'Composer',
+    attachFile: 'Joindre un fichier',
   },
 };
 

@@ -74,5 +74,13 @@ service cloud.firestore {
       allow create: if isAuth();
       allow update: if isAuth();
     }
+
+    // Quick Sends
+    match /quickSends/{sendId} {
+      allow read: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
   }
 }

@@ -19,5 +19,7 @@ jobs:
         working-directory: backend
       - run: node run.js
         working-directory: backend
+      - run: node quick-send.js
+        working-directory: backend
       - run: node check-imap.js
         working-directory: backend

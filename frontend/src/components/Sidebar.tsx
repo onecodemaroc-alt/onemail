@@ -10,6 +10,7 @@ import {
   LogOut,
   Languages,
   Inbox,
+  PenSquare,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -44,6 +45,10 @@ export default function Sidebar() {
         <NavLink to="/templates" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <FileText className="w-5 h-5" />
           <span>{t('templates')}</span>
+        </NavLink>
+        <NavLink to="/compose" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <PenSquare className="w-5 h-5" />
+          <span>{t('compose')}</span>
         </NavLink>
         <NavLink to="/campaigns" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Send className="w-5 h-5" />

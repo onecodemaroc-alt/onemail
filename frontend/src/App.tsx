@@ -8,6 +8,7 @@ import Templates from './pages/Templates';
 import Campaigns from './pages/Campaigns';
 import CampaignCreate from './pages/CampaignCreate';
 import CampaignDetail from './pages/CampaignDetail';
+import Compose from './pages/Compose';
 import SmtpAccounts from './pages/SmtpAccounts';
 import EmailLogs from './pages/EmailLogs';
 import Inbox from './pages/Inbox';
@@ -55,6 +56,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="templates" element={<Templates />} />
+        <Route path="compose" element={<Compose />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="campaigns/new" element={<CampaignCreate />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
