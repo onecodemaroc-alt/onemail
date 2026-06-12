@@ -33,7 +33,7 @@ interface ContactList {
 
 export default function UsersPage() {
   const { t, lang } = useI18n();
-  const { userRole } = useAuth();
+  const { userRole, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [accounts, setAccounts] = useState<SmtpAccount[]>([]);
   const [lists, setLists] = useState<ContactList[]>([]);
@@ -60,7 +60,9 @@ export default function UsersPage() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!authLoading) load();
+  }, [authLoading]);
 
   const handleAddUser = async () => {
     if (!form.email || !form.password) { toast.error(t('required')); return; }
