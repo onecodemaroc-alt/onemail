@@ -11,10 +11,15 @@ interface I18nContextType {
 const I18nContext = createContext<I18nContextType | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>('ar');
+  const [lang, setLangState] = useState<Lang>(() => {
+    const saved = localStorage.getItem('lang');
+    if (saved === 'ar' || saved === 'fr') return saved;
+    return 'fr';
+  });
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
+    localStorage.setItem('lang', l);
     document.documentElement.lang = l;
     document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
   }, []);
