@@ -3,6 +3,7 @@ import { collection, getDocs, query, orderBy, limit, doc, updateDoc, where } fro
 import { Inbox as InboxIcon, Mail, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Email {
   id: string;
@@ -22,6 +23,7 @@ interface Email {
 
 export default function Inbox() {
   const { t } = useI18n();
+  const { allowedSmtpIds } = useAuth();
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Email | null>(null);
@@ -59,6 +61,10 @@ export default function Inbox() {
 
   const spamCount = emails.filter(e => e.spam).length;
 
+  const visibleEmails = allowedSmtpIds.length > 0
+    ? emails.filter(e => allowedSmtpIds.includes(e.smtpAccountId))
+    : emails;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -71,7 +77,7 @@ export default function Inbox() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">{t('inbox')}</h1>
-        <span className="text-sm text-gray-500">{emails.length} {t('emails')} ({spamCount} spam)</span>
+        <span className="text-sm text-gray-500">{visibleEmails.length} {t('emails')} ({emails.filter(e => e.spam).length} spam)</span>
       </div>
 
       {/* Tabs */}
@@ -84,7 +90,7 @@ export default function Inbox() {
         ))}
       </div>
 
-      {emails.length === 0 ? (
+      {visibleEmails.length === 0 ? (
         <div className="card text-center py-12">
           <InboxIcon className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-500">{t('noEmails')}</p>
@@ -93,7 +99,7 @@ export default function Inbox() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Email list */}
           <div className="card overflow-hidden p-0 lg:col-span-1 max-h-[70vh] overflow-y-auto">
-            {emails.map((email) => (
+            {visibleEmails.map((email) => (
               <div
                 key={email.id}
                 className={`p-4 border-b border-dark-700 cursor-pointer hover:bg-dark-700/50 transition-colors ${!email.read ? 'bg-dark-700/30' : ''} ${selected?.id === email.id ? 'bg-dark-600/50' : ''} ${email.spam ? 'border-l-2 border-l-red-500/50' : ''}`}
