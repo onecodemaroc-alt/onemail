@@ -13,6 +13,7 @@ interface AuthContextType {
   userRole: 'admin' | 'sender' | null;
   allowedSmtpIds: string[];
   visibleListIds: string[];
+  sidebarPages: string[];
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<'admin' | 'sender' | null>(null);
   const [allowedSmtpIds, setAllowedSmtpIds] = useState<string[]>([]);
   const [visibleListIds, setVisibleListIds] = useState<string[]>([]);
+  const [sidebarPages, setSidebarPages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,10 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserRole(data?.role || 'sender');
         setAllowedSmtpIds(data?.allowedSmtpIds || []);
         setVisibleListIds(data?.visibleListIds || []);
+        setSidebarPages(data?.sidebarPages || []);
       } else {
         setUserRole(null);
         setAllowedSmtpIds([]);
         setVisibleListIds([]);
+        setSidebarPages([]);
       }
       setLoading(false);
     });
@@ -55,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, userRole, allowedSmtpIds, visibleListIds, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, userRole, allowedSmtpIds, visibleListIds, sidebarPages, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

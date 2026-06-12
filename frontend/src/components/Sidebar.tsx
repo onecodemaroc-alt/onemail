@@ -16,8 +16,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 
 export default function Sidebar() {
-  const { logout, userRole } = useAuth();
+  const { logout, userRole, sidebarPages } = useAuth();
   const { t, lang, setLang, dir } = useI18n();
+
+  const canShow = (page: string) => sidebarPages.length === 0 || sidebarPages.includes(page);
 
   return (
     <aside className={`fixed top-0 ${dir === 'rtl' ? 'right-0' : 'left-0'} h-full w-64 bg-dark-800 border-${dir === 'rtl' ? 'left' : 'right'} border-dark-700 flex flex-col z-50`}>
@@ -34,38 +36,54 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
+        {canShow('dashboard') && (
         <NavLink to="/" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <LayoutDashboard className="w-5 h-5" />
           <span>{t('dashboard')}</span>
         </NavLink>
+        )}
+        {canShow('contacts') && (
         <NavLink to="/contacts" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Users className="w-5 h-5" />
           <span>{t('contacts')}</span>
         </NavLink>
+        )}
+        {canShow('templates') && (
         <NavLink to="/templates" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <FileText className="w-5 h-5" />
           <span>{t('templates')}</span>
         </NavLink>
+        )}
+        {canShow('compose') && (
         <NavLink to="/compose" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <PenSquare className="w-5 h-5" />
           <span>{t('compose')}</span>
         </NavLink>
+        )}
+        {canShow('campaigns') && (
         <NavLink to="/campaigns" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Send className="w-5 h-5" />
           <span>{t('campaigns')}</span>
         </NavLink>
+        )}
+        {canShow('smtp') && (
         <NavLink to="/smtp" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Mail className="w-5 h-5" />
           <span>{t('smtpAccounts')}</span>
         </NavLink>
+        )}
+        {canShow('inbox') && (
         <NavLink to="/inbox" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <Inbox className="w-5 h-5" />
           <span>{t('inbox')}</span>
         </NavLink>
+        )}
+        {canShow('logs') && (
         <NavLink to="/logs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
           <ScrollText className="w-5 h-5" />
           <span>{t('logs')}</span>
         </NavLink>
+        )}
         {userRole === 'admin' && (
           <NavLink to="/users" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
             <Shield className="w-5 h-5" />

@@ -3,13 +3,15 @@ import {
   collection, getDocs, addDoc, doc, getDoc, setDoc,
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { Users as UsersIcon, Shield, User, ShieldCheck, Plus, Mail, List } from 'lucide-react';
+import { Users as UsersIcon, Shield, User, ShieldCheck, Plus, Mail, List, Eye, EyeOff } from 'lucide-react';
 import { db, auth } from '../lib/firebase';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
 import Modal from '../components/Modal';
 import toast from 'react-hot-toast';
+
+const SIDEBAR_PAGES = ['dashboard', 'contacts', 'templates', 'compose', 'campaigns', 'smtp', 'inbox', 'logs'];
 
 interface AppUser {
   id: string;
@@ -18,6 +20,7 @@ interface AppUser {
   createdAt: string;
   allowedSmtpIds?: string[];
   visibleListIds?: string[];
+  sidebarPages?: string[];
 }
 
 interface SmtpAccount {
@@ -40,7 +43,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<AppUser | null>(null);
-  const [form, setForm] = useState({ email: '', password: '', role: 'sender' as 'admin' | 'sender', allowedSmtpIds: [] as string[], visibleListIds: [] as string[] });
+  const [form, setForm] = useState({ email: '', password: '', role: 'sender' as 'admin' | 'sender', allowedSmtpIds: [] as string[], visibleListIds: [] as string[], sidebarPages: [] as string[] });
 
   const load = async () => {
     setLoading(true);
@@ -67,17 +70,17 @@ export default function UsersPage() {
   const handleAddUser = async () => {
     if (!form.email || !form.password) { toast.error(t('required')); return; }
     try {
-      const data = await apiClient.createUser({ email: form.email, password: form.password, role: form.role, allowedSmtpIds: form.allowedSmtpIds, visibleListIds: form.visibleListIds });
+      const data = await apiClient.createUser({ email: form.email, password: form.password, role: form.role, allowedSmtpIds: form.allowedSmtpIds, visibleListIds: form.visibleListIds, sidebarPages: form.sidebarPages });
       if (data.success) {
         toast.success(t('userAdded'));
         setModalOpen(false);
-        setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [] });
+        setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [], sidebarPages: [] });
         load();
       } else {
         toast.error(data.error || t('error'));
       }
     } catch {
-      // Fallback: create user via Firebase Auth REST API + Firestore directly
+      // Fallback
       try {
         const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
         const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
@@ -92,11 +95,12 @@ export default function UsersPage() {
             role: form.role,
             allowedSmtpIds: form.allowedSmtpIds,
             visibleListIds: form.visibleListIds,
+            sidebarPages: form.sidebarPages,
             createdAt: new Date().toISOString(),
           });
           toast.success(t('userAdded'));
           setModalOpen(false);
-          setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [] });
+          setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [], sidebarPages: [] });
           load();
         } else {
           toast.error(data.error?.message || t('error'));
@@ -109,7 +113,7 @@ export default function UsersPage() {
 
   const openEdit = (u: AppUser) => {
     setEditUser(u);
-    setForm({ email: u.email, password: '', role: u.role, allowedSmtpIds: u.allowedSmtpIds || [], visibleListIds: u.visibleListIds || [] });
+    setForm({ email: u.email, password: '', role: u.role, allowedSmtpIds: u.allowedSmtpIds || [], visibleListIds: u.visibleListIds || [], sidebarPages: u.sidebarPages || [] });
     setModalOpen(true);
   };
 
@@ -121,12 +125,13 @@ export default function UsersPage() {
         role: form.role,
         allowedSmtpIds: form.allowedSmtpIds,
         visibleListIds: form.visibleListIds,
+        sidebarPages: form.sidebarPages,
         createdAt: editUser.createdAt,
       }, { merge: true });
       toast.success(t('success'));
       setModalOpen(false);
       setEditUser(null);
-      setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [] });
+      setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [], sidebarPages: [] });
       load();
     } catch (err: any) {
       toast.error(err.message);
@@ -151,6 +156,21 @@ export default function UsersPage() {
     }));
   };
 
+  const toggleSidebarPage = (page: string) => {
+    setForm(f => ({
+      ...f,
+      sidebarPages: f.sidebarPages.includes(page)
+        ? f.sidebarPages.filter(p => p !== page)
+        : [...f.sidebarPages, page],
+    }));
+  };
+
+  const sidebarPageLabels: Record<string, string> = {
+    dashboard: 'dashboard', contacts: 'contacts', templates: 'templates',
+    compose: 'compose', campaigns: 'campaigns', smtp: 'smtpAccounts',
+    inbox: 'inbox', logs: 'logs',
+  };
+
   if (userRole !== 'admin') {
     return (
       <div className="flex items-center justify-center h-64">
@@ -171,7 +191,7 @@ export default function UsersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">{t('manageUsers')}</h1>
-        <button onClick={() => { setEditUser(null); setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [] }); setModalOpen(true); }} className="btn-primary flex items-center gap-2">
+        <button onClick={() => { setEditUser(null); setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [], sidebarPages: [] }); setModalOpen(true); }} className="btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" /> {t('addUser')}
         </button>
       </div>
@@ -285,6 +305,19 @@ export default function UsersPage() {
               </div>
             )}
             <p className="text-xs text-gray-600 mt-1">{t('listPermissionsHint')}</p>
+          </div>
+
+          <div className="border-t border-dark-700 pt-4">
+            <h4 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2"><Eye className="w-4 h-4" /> {t('sidebarPages')}</h4>
+            <p className="text-xs text-gray-500 mb-2">{t('sidebarPagesHint')}</p>
+            <div className="grid grid-cols-2 gap-1 max-h-[200px] overflow-y-auto">
+              {SIDEBAR_PAGES.map(page => (
+                <label key={page} className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer p-1 rounded hover:bg-dark-700/50">
+                  <input type="checkbox" checked={form.sidebarPages.includes(page)} onChange={() => toggleSidebarPage(page)} className="rounded bg-dark-700 border-dark-400" />
+                  {t(sidebarPageLabels[page])}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
