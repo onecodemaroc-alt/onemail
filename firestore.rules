@@ -12,7 +12,9 @@ service cloud.firestore {
     }
 
     function getUserRole() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data != null
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
     }
 
     // Users — owner only, admins can read all

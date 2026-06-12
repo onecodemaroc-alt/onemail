@@ -46,13 +46,15 @@ export default function UsersPage() {
     setLoading(true);
     try {
       const [uSnap, aSnap, lSnap] = await Promise.all([
-        getDocs(collection(db, 'users')),
-        getDocs(collection(db, 'smtpAccounts')),
-        getDocs(collection(db, 'contactLists')),
+        getDocs(collection(db, 'users')).catch(() => ({ docs: [] })),
+        getDocs(collection(db, 'smtpAccounts')).catch(() => ({ docs: [] })),
+        getDocs(collection(db, 'contactLists')).catch(() => ({ docs: [] })),
       ]);
       setUsers(uSnap.docs.map((d) => ({ id: d.id, ...d.data() } as AppUser)));
       setAccounts(aSnap.docs.map((d) => ({ id: d.id, ...d.data() } as SmtpAccount)));
       setLists(lSnap.docs.map((d) => ({ id: d.id, ...d.data() } as ContactList)));
+    } catch (err) {
+      console.error('Load error:', err);
     } finally {
       setLoading(false);
     }
