@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   collection, getDocs, addDoc, doc, getDoc, setDoc,
 } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Users as UsersIcon, Shield, User, ShieldCheck, Plus, Mail, List } from 'lucide-react';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { apiClient } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useI18n } from '../i18n/I18nContext';
@@ -72,7 +73,33 @@ export default function UsersPage() {
         toast.error(data.error || t('error'));
       }
     } catch {
-      toast.error(t('error'));
+      // Fallback: create user via Firebase Auth REST API + Firestore directly
+      try {
+        const apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
+        const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email, password: form.password, returnSecureToken: true }),
+        });
+        const data = await res.json();
+        if (data.idToken) {
+          await setDoc(doc(db, 'users', data.localId), {
+            email: form.email,
+            role: form.role,
+            allowedSmtpIds: form.allowedSmtpIds,
+            visibleListIds: form.visibleListIds,
+            createdAt: new Date().toISOString(),
+          });
+          toast.success(t('userAdded'));
+          setModalOpen(false);
+          setForm({ email: '', password: '', role: 'sender', allowedSmtpIds: [], visibleListIds: [] });
+          load();
+        } else {
+          toast.error(data.error?.message || t('error'));
+        }
+      } catch {
+        toast.error(t('error'));
+      }
     }
   };
 
