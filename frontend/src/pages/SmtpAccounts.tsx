@@ -6,6 +6,7 @@ import { Plus, Plug, Power, PowerOff, Trash2, Edit3, RefreshCw } from 'lucide-re
 import { db } from '../lib/firebase';
 import { apiClient } from '../lib/api';
 import { useI18n } from '../i18n/I18nContext';
+import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
 import toast from 'react-hot-toast';
 
@@ -28,6 +29,7 @@ interface SmtpAccount {
 
 export default function SmtpAccounts() {
   const { t } = useI18n();
+  const { allowedSmtpIds } = useAuth();
   const [accounts, setAccounts] = useState<SmtpAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,6 +51,10 @@ export default function SmtpAccounts() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const visibleAccounts = allowedSmtpIds.length > 0
+    ? accounts.filter(a => allowedSmtpIds.includes(a.id))
+    : accounts;
 
   const openAdd = () => {
     setEditId(null);
@@ -131,7 +137,7 @@ export default function SmtpAccounts() {
         </button>
       </div>
 
-      {accounts.length === 0 ? (
+      {visibleAccounts.length === 0 ? (
         <div className="card text-center py-12">
           <Plug className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-500">{t('noAccounts')}</p>
@@ -139,7 +145,7 @@ export default function SmtpAccounts() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {accounts.map((acc) => (
+          {visibleAccounts.map((acc) => (
             <div key={acc.id} className="card flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className={`p-2 rounded-lg ${acc.status === 'active' ? 'bg-green-900/20' : 'bg-gray-900/20'}`}>
