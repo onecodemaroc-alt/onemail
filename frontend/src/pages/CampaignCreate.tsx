@@ -4,6 +4,7 @@ import { collection, getDocs, addDoc, doc, getDoc } from 'firebase/firestore';
 import { ArrowLeft, Send, Clock } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const triggerWorkflow = async () => {
@@ -35,6 +36,7 @@ interface Template {
 export default function CampaignCreate() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { allowedSmtpIds, visibleListIds } = useAuth();
 
   const [accounts, setAccounts] = useState<SmtpAccount[]>([]);
   const [lists, setLists] = useState<ContactList[]>([]);
@@ -112,6 +114,14 @@ export default function CampaignCreate() {
 
   const selectedTemplate = templates.find((t) => t.id === form.templateId);
 
+  const visibleAccounts = allowedSmtpIds.length > 0
+    ? accounts.filter(a => allowedSmtpIds.includes(a.id))
+    : accounts;
+
+  const visibleLists = visibleListIds.length > 0
+    ? lists.filter(l => visibleListIds.includes(l.id))
+    : lists;
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
@@ -135,9 +145,9 @@ export default function CampaignCreate() {
 
           <div className="card">
             <h3 className="card-header">{t('selectRecipients')}</h3>
-            <select className="input-field" value={form.listId} onChange={(e) => setForm({ ...form, listId: e.target.value })}>
-              <option value="">{t('selectRecipients')}</option>
-              {lists.map((l) => <option key={l.id} value={l.id}>{l.name} ({l.count})</option>)}
+              <select className="input-field" value={form.listId} onChange={(e) => setForm({ ...form, listId: e.target.value })}>
+                <option value="">{t('selectRecipients')}</option>
+                {visibleLists.map((l) => <option key={l.id} value={l.id}>{l.name} ({l.count})</option>)}
             </select>
           </div>
 
@@ -163,11 +173,11 @@ export default function CampaignCreate() {
 
           <div className="card">
             <h3 className="card-header">{t('selectAccounts')}</h3>
-            {accounts.length === 0 ? (
+              {visibleAccounts.length === 0 ? (
               <p className="text-gray-500">{t('noAccounts')}</p>
             ) : (
               <div className="space-y-2">
-                {accounts.map((acc) => (
+                {visibleAccounts.map((acc) => (
                   <label key={acc.id} className="flex items-center gap-3 p-3 rounded-lg bg-dark-700/50 cursor-pointer hover:bg-dark-700">
                     <input
                       type="checkbox"
@@ -229,7 +239,7 @@ export default function CampaignCreate() {
             </div>
             <div className="flex justify-between p-3 bg-dark-700/50 rounded-lg">
               <span className="text-gray-400">{t('contactList')}</span>
-              <span className="text-gray-200">{lists.find((l) => l.id === form.listId)?.name || '-'}</span>
+              <span className="text-gray-200">{visibleLists.find((l) => l.id === form.listId)?.name || '-'}</span>
             </div>
             <div className="flex justify-between p-3 bg-dark-700/50 rounded-lg">
               <span className="text-gray-400">{t('emailTemplate')}</span>

@@ -11,9 +11,14 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == userId;
     }
 
-    // Users — owner only
+    function getUserRole() {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Users — owner only, admins can read all
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId) || getUserRole() == 'admin';
+      allow write: if isOwner(userId);
     }
 
     // SMTP Accounts — only authenticated users can manage

@@ -11,6 +11,8 @@ import { auth, db } from '../lib/firebase';
 interface AuthContextType {
   user: User | null;
   userRole: 'admin' | 'sender' | null;
+  allowedSmtpIds: string[];
+  visibleListIds: string[];
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -21,6 +23,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<'admin' | 'sender' | null>(null);
+  const [allowedSmtpIds, setAllowedSmtpIds] = useState<string[]>([]);
+  const [visibleListIds, setVisibleListIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,9 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(u);
       if (u) {
         const snap = await getDoc(doc(db, 'users', u.uid));
-        setUserRole(snap.data()?.role || 'sender');
+        const data = snap.data();
+        setUserRole(data?.role || 'sender');
+        setAllowedSmtpIds(data?.allowedSmtpIds || []);
+        setVisibleListIds(data?.visibleListIds || []);
       } else {
         setUserRole(null);
+        setAllowedSmtpIds([]);
+        setVisibleListIds([]);
       }
       setLoading(false);
     });
@@ -46,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, userRole, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, userRole, allowedSmtpIds, visibleListIds, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

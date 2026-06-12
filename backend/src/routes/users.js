@@ -5,7 +5,7 @@ const router = Router();
 
 router.post('/users', async (req, res) => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password, role, allowedSmtpIds, visibleListIds, hiddenListIds } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password required' });
@@ -17,11 +17,15 @@ router.post('/users', async (req, res) => {
       emailVerified: false,
     });
 
-    await db.collection('users').doc(userRecord.uid).set({
+    const userData = {
       email,
       role: role || 'sender',
       createdAt: new Date().toISOString(),
-    });
+    };
+    if (allowedSmtpIds) userData.allowedSmtpIds = allowedSmtpIds;
+    if (visibleListIds) userData.visibleListIds = visibleListIds;
+
+    await db.collection('users').doc(userRecord.uid).set(userData);
 
     res.json({ success: true, uid: userRecord.uid });
   } catch (error) {

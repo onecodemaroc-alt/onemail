@@ -4,6 +4,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Send, Paperclip, X, Users, Plus, Mail, BookmarkPlus } from 'lucide-react';
 import { db, storage } from '../lib/firebase';
 import { useI18n } from '../i18n/I18nContext';
+import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
   interface Contact { id: string; name: string; email: string; listId: string; }
@@ -13,6 +14,7 @@ interface Attachment { file: File; name: string; uploading?: boolean; url?: stri
 
 export default function Compose() {
   const { t } = useI18n();
+  const { allowedSmtpIds, visibleListIds } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [accounts, setAccounts] = useState<SmtpAccount[]>([]);
   const [contactLists, setContactLists] = useState<ContactList[]>([]);
@@ -153,6 +155,14 @@ export default function Compose() {
     c.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  const visibleContacts = visibleListIds.length > 0
+    ? filtered.filter(c => visibleListIds.includes(c.listId))
+    : filtered;
+
+  const visibleAccounts = allowedSmtpIds.length > 0
+    ? accounts.filter(a => allowedSmtpIds.includes(a.id))
+    : accounts;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -189,7 +199,7 @@ export default function Compose() {
             </select>
           )}
           <div className="space-y-1 max-h-[300px] overflow-y-auto">
-            {filtered.map(c => (
+            {visibleContacts.map(c => (
               <label key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-dark-700/50 cursor-pointer">
                 <input type="checkbox" checked={selectedContacts.includes(c.id)} onChange={() => toggleContact(c.id)} className="rounded bg-dark-700 border-dark-400" />
                 <div className="min-w-0">
@@ -206,7 +216,7 @@ export default function Compose() {
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">{t('smtpAccount')}</label>
             <select className="input-field" value={smtpId} onChange={(e) => setSmtpId(e.target.value)}>
-              {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.username})</option>)}
+              {visibleAccounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.username})</option>)}
             </select>
           </div>
           <div>
